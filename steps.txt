@@ -1,0 +1,19 @@
+Cómo estoy configurando el proyecto:
+1. Después de crear el repositorio y clonarlo en local, creo el .gitignore.
+2. Vamos a crear el entorno virtual y lo activamos : 
+    python -m venv .venv
+    source .venv/Scripts/activate
+3. Instalar dependencias: 
+    pip install django
+    pip install selenium
+    pip install webdriver-manager 
+4. Crear requirements.txt: 
+    pip freeze > requirements.txt
+5. Crear carpeta del proyecto: 
+    django-admin startproject project_webScraping
+6. Entramos en la carpeta del proyecto : cd project_webScraping
+7. Creamos una app y añadimos esta app en las apps en settings:  python  manage.py startapp scraper 
+8. Ahora vamos a crear el modelo en nuestra app, después de investigar nuestra web, en la opción investigar y detectar las class del html de la información que nos interesa, ponemos en nuestro modelo lo que nos interesa extraer.
+9. Aplicamos las migraciones:
+    python manage.py makemigrations
+    python manage.py migrate
