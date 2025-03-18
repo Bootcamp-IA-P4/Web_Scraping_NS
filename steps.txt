@@ -17,3 +17,6 @@ Cómo estoy configurando el proyecto:
 9. Aplicamos las migraciones:
     python manage.py makemigrations
     python manage.py migrate
+10. Creamos nuestro archivo para los métodos.
+11. Creamos nuestro archivo que le llamaremos database.py dentro de /services y dentro creamos nuestra función para guardar lo extraído y lo importamos en book_scraper y lo configuramos.
+12. Ejecutar el scraping, desde el mismo sitio donde está manage.py: python scraper/services/book_scraper.py
