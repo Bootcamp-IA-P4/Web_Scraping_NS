@@ -2,8 +2,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from .database import DatabaseManager
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from database import DatabaseManager
+import time
 
 class BookScraper:
     def __init__(self):
@@ -15,6 +16,27 @@ class BookScraper:
     def setup_driver(self):
         self.driver = webdriver.Chrome()
         self.wait = WebDriverWait(self.driver, 10)
+
+    def next_page(self):
+        try:
+            next_button = self.driver.find_element(By.CSS_SELECTOR, "div.nav-previous a")
+            return True
+        except NoSuchElementException:
+            return False
+        
+    def click_next_page(self):
+        try: 
+            next_button = self.wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "div.nav-previous a"))
+            )
+            self.driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
+            time.sleep(2)
+            next_button.click()
+            time.sleep(3)
+            return True
+        except Exception as e:
+            print(f"Error al hacer clic en 'Comentarios anteriores': {e}")
+            return False
 
     def close_driver(self):
         if self.driver:
@@ -49,21 +71,37 @@ class BookScraper:
 
     def scrape_comments(self):
         try:
-            self.navigate_page() #navega a la página
-            comments = self.get_comments() #obtenemos los comentarios
+            self.navigate_page()
+            all_comments = []
+            page_num = 1
+            
+            while True:
+                print(f"\n📄 Scrapeando página {page_num}...")
+                comments = self.get_comments()
 
-            all_comments = [] #lista para guardar los comentarios
-            for comment in comments:   #iteramos sobre los comentarios
-                info = self.extract_comment_info(comment)
-                if info: #si la información es correcta
-                    all_comments.append(info)
-                    print(f"Autor: {info['author']}")
-                    print(f"Fecha: {info['date']}")
-                    print(f"Comentario: {info['content'][:100]}...")
-                    print("-"*50)
+                for comment in comments:
+                    info = self.extract_comment_info(comment)
+                    if info:
+                        all_comments.append(info)
+                        print(f"Autor: {info['author']}")
+                        print(f"Fecha: {info['date']}")
+                        print(f"Comentario: {info['content'][:100]}...")
+                        print("-"*50)
+                print(f"✅ Página {page_num} completada. Comentarios encontrados: {len(comments)}")
+
+                if not self.next_page():
+                    print("🏁 No hay más páginas para scrapear")
+                    break
+
+                if not self.click_next_page():
+                    print("🏁 No se pudo hacer clic en 'Comentarios anteriores'")
+                    break
+
+                page_num += 1
 
             self.db.save_comments(all_comments, self.url)
             return all_comments
+                
         except Exception as e:
             print(f"Error al scrapear los comentarios: {e}")
             return []
@@ -71,8 +109,10 @@ class BookScraper:
 if __name__ == "__main__":                #crea una instancia del scraper
     scraper = BookScraper()
     try:
-        scraper.setup_driver()           #inicia el navegador
-        results = scraper.scrape_comments() #ejecuta el scrapeo
-        print(f"Se scrapearon {len(results)} comentarios") #imprime el número de comentarios scrapeados
+        if scraper.db.connection_test():       #Pruebo la conexión antes
+            scraper.setup_driver()           #inicia el navegador
+            results = scraper.scrape_comments() #ejecuta el scrapeo
+            print(f"Se scrapearon {len(results)} comentarios") #imprime el número de comentarios scrapeados
     finally:
         scraper.close_driver()
+        scraper.db.close_connection()

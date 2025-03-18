@@ -20,3 +20,22 @@ Cómo estoy configurando el proyecto:
 10. Creamos nuestro archivo para los métodos.
 11. Creamos nuestro archivo que le llamaremos database.py dentro de /services y dentro creamos nuestra función para guardar lo extraído y lo importamos en book_scraper y lo configuramos.
 12. Ejecutar el scraping, desde el mismo sitio donde está manage.py: python scraper/services/book_scraper.py
+
+
+
+
+Para conectar la base de datos:
+1. He abierto un cluster en mongodb atlas y he añadido una database llamada web_scraping y una colección comments, he copiado la URI.
+2. Configuramos nuestras variables de entorno.
+3. Instalamos dotenv: pip install python-dotenv
+4. Instalamos djongo y pymongo: pip install djongo pymongo 
+5. En nuestro settings importamos os y load_dotenv de dotenv y lo activamos con load_dotenv().
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+6. Registrar el modelo en admin.py:
+    from django.contrib import admin
+   from .models import BookRecommendation
+
+   admin.site.register(BookRecommendation)
+7. Instalar dns porque es necesario para mongodb atlas: pip install dnspython
