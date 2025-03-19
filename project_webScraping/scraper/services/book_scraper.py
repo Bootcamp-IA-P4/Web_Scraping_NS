@@ -105,14 +105,89 @@ class BookScraper:
         except Exception as e:
             print(f"Error al scrapear los comentarios: {e}")
             return []
-        
-if __name__ == "__main__":                #crea una instancia del scraper
+
+    def search_comments(self, keyword):
+        try:
+            print(f"\n🔍 Buscando comentarios con la palabra clave: '{keyword}'...")
+            
+            # Navegar a la página principal
+            self.navigate_page()
+            
+            # Encontrar el campo de búsqueda
+            search_input = self.wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "search-field"))
+            )
+            
+            # Limpiar el campo y escribir la palabra clave
+            search_input.clear()
+            search_input.send_keys(keyword)
+            
+            # Enviar la búsqueda
+            search_input.submit()
+            
+            # Esperar a que carguen los resultados
+            time.sleep(2)
+            
+            # Obtener y procesar los comentarios encontrados
+            search_results = []
+            page_num = 1
+            
+            while True:
+                print(f"\n📄 Procesando página {page_num} de resultados...")
+                comments = self.get_comments()
+                
+                for comment in comments:
+                    info = self.extract_comment_info(comment)
+                    if info:
+                        # Añadir la palabra clave de búsqueda al documento
+                        info['search_keyword'] = keyword
+                        search_results.append(info)
+                        print(f"Autor: {info['author']}")
+                        print(f"Fecha: {info['date']}")
+                        print(f"Comentario: {info['content'][:100]}...")
+                        print("-"*50)
+                
+                print(f"✅ Página {page_num} completada. Resultados encontrados: {len(comments)}")
+                
+                # Verificar si hay más páginas de resultados
+                if not self.next_page():
+                    print("🏁 No hay más páginas de resultados")
+                    break
+                
+                if not self.click_next_page():
+                    print("🏁 No se pudo acceder a la siguiente página")
+                    break
+                
+                page_num += 1
+            
+            # Guardar los resultados en la base de datos
+            if search_results:
+                self.db.save_comments(search_results, self.url)
+                print(f"\n✨ Se encontraron y guardaron {len(search_results)} comentarios relacionados con '{keyword}'")
+            else:
+                print(f"\n❌ No se encontraron comentarios relacionados con '{keyword}'")
+            
+            return search_results
+            
+        except Exception as e:
+            print(f"Error durante la búsqueda: {e}")
+            return []
+
+if __name__ == "__main__":
     scraper = BookScraper()
     try:
-        if scraper.db.connection_test():       #Pruebo la conexión antes
-            scraper.setup_driver()           #inicia el navegador
-            results = scraper.scrape_comments() #ejecuta el scrapeo
-            print(f"Se scrapearon {len(results)} comentarios") #imprime el número de comentarios scrapeados
+        if scraper.db.connection_test():
+            scraper.setup_driver()
+            
+            # Ejemplo de uso del buscador
+            keyword = input("Introduce una palabra clave para buscar (o presiona Enter para scrapear todo): ").strip()
+            
+            if keyword:
+                results = scraper.search_comments(keyword)
+                print(f"Se encontraron {len(results)} comentarios relacionados con '{keyword}'")
+            else:
+                results = scraper.scrape_comments()
+                print(f"Se scrapearon {len(results)} comentarios en total")
     finally:
         scraper.close_driver()
         scraper.db.close_connection()
