@@ -13,5 +13,4 @@ class BookRecommendation(models.Model):
     class Meta:
         verbose_name = "Recomendación de libro"
         verbose_name_plural = "Recomendaciones de libros"
-        ordering = ['-date']
         db_table = 'comments'

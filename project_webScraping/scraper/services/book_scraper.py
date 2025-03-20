@@ -1,3 +1,4 @@
+from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -7,15 +8,37 @@ from datetime import datetime
 from scraper.models import BookRecommendation
 import time
 from django.db import close_old_connections
+from django.utils.timezone import make_aware
+
 class BookScraper:
     def __init__(self):
-        self.driver = None  # Iniciamos en none porque no tenemos un navegador
-        self.wait = None # Iniciamos en none porque inicialmente no tenemos espera
-        self.url = "https://meencantaleer.es/tu-opinas/" # URL de la web que queremos scrapear
+        self.driver = None  
+        self.wait = None 
+        self.url = "https://meencantaleer.es/tu-opinas/" 
 
     def setup_driver(self):
         self.driver = webdriver.Chrome()
         self.wait = WebDriverWait(self.driver, 10)
+    
+    def close_driver(self):
+        if self.driver:
+            self.driver.quit()
+
+    def navigate_page(self):
+        self.driver.get(self.url)
+        for _ in range(5):  
+            self.driver.execute_script("window.scrollBy(0, 1000);")
+            time.sleep(1)
+
+    def get_comments(self):
+        try:
+            comments = self.wait.until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".comment-body.clearfix"))
+            )
+            return comments
+        except TimeoutException:
+            print("No se cargaron los comentarios 😒")
+            return []
 
     def next_page(self):
         try:
@@ -38,58 +61,6 @@ class BookScraper:
             print(f"Error al hacer clic en 'Comentarios anteriores': {e}")
             return False
     
-    def process_date(self, date_str):
-        meses = {
-            'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
-            'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
-            'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
-        }
-    
-        try:
-            date_str = date_str.replace('\n', '').strip()
-            date_str = ' '.join(date_str.split())
-            date_str = date_str.replace("el ", "").replace(" a las ", " ")
-            
-            parts = date_str.split()
-            if len(parts) != 5:
-                raise ValueError(f"Formato de fecha inesperado. Partes encontradas: {parts}")
-            
-            mes = meses[parts[0].lower()]
-            dia = parts[1].replace(",", "")
-            año = parts[2].replace(",", "").strip()
-            hora = parts[3]
-            am_pm = parts[4].lower()
-            
-            hora_parts = hora.split(":")
-            hora_num = int(hora_parts[0])
-            if am_pm == "pm" and hora_num != 12:
-                hora_num += 12
-            elif am_pm == "am" and hora_num == 12:
-                hora_num = 0
-            
-            fecha_formateada = f"{año}-{mes}-{dia.zfill(2)} {hora_num:02d}:{hora_parts[1]}"
-            return datetime.strptime(fecha_formateada, "%Y-%m-%d %H:%M")
-        except Exception as e:
-            print(f"Error procesando fecha: {e}")
-            return None
-
-    def close_driver(self):
-        if self.driver:
-            self.driver.quit()
-
-    def navigate_page(self):
-        self.driver.get(self.url)
-
-    def get_comments(self):
-        try:
-            comments = self.wait.until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".comment-body.clearfix"))
-            )
-            return comments
-        except TimeoutException:
-            print("No se cargaron los comentarios 😒")
-            return []
-
     def extract_comment_info(self, comment):
         try:
             author = comment.find_element(By.CLASS_NAME, "fn").text
@@ -102,6 +73,43 @@ class BookScraper:
             }
         except Exception as e:
             print(f"Error al extraer información del comentario: {e}")
+            return None
+    
+    def process_date(self, date_str):
+        meses = {
+            'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+            'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+            'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
+        }
+
+        try:
+            date_str = date_str.replace('\n', '').strip()
+            date_str = ' '.join(date_str.split())
+            date_str = date_str.replace("el ", "").replace(" a las ", " ")
+
+            parts = date_str.split()
+            if len(parts) != 5:
+                raise ValueError(f"Formato de fecha inesperado. Partes encontradas: {parts}")
+
+            mes = meses[parts[0].lower()]
+            dia = parts[1].replace(",", "")
+            año = parts[2].replace(",", "").strip()
+            hora = parts[3]
+            am_pm = parts[4].lower()
+
+            hora_parts = hora.split(":")
+            hora_num = int(hora_parts[0])
+            if am_pm == "pm" and hora_num != 12:
+                hora_num += 12
+            elif am_pm == "am" and hora_num == 12:
+                hora_num = 0
+
+            fecha_formateada = f"{año}-{mes}-{dia.zfill(2)} {hora_num:02d}:{hora_parts[1]}"
+            naive_datetime = datetime.strptime(fecha_formateada, "%Y-%m-%d %H:%M")
+            aware_datetime = make_aware(naive_datetime)  # Convierte a una fecha con zona horaria
+            return aware_datetime
+        except Exception as e:
+            print(f"Error procesando fecha: {e}")
             return None
 
     def scrape_comments(self):
@@ -122,6 +130,7 @@ class BookScraper:
                             date = self.process_date(info['date'])
                             if date:
                                 close_old_connections()
+                                print(f"Guardando comentario: {info}")
                                 BookRecommendation.objects.create(
                                     author=info['author'],
                                     date=date,
@@ -134,7 +143,8 @@ class BookScraper:
                                 print(f"Comentario: {info['content'][:100]}...")
                                 print("-"*50)
                         except Exception as e:
-                            print(f"Error al guardar comentario: {e}")
+                            print(f"Error al guardar comentario: {e.__class__.__name__}")
+                            print(f"Datos del comentario: {info}")
 
                 print(f"✅ Página {page_num} completada.")
 
@@ -152,12 +162,12 @@ class BookScraper:
             print(f"Error al scrapear los comentarios: {e}")
             return 0
         
-if __name__ == "__main__":                #crea una instancia del scraper
+if __name__ == "__main__":                
     scraper = BookScraper()
     try:
         scraper.setup_driver()        
-        total_saved = scraper.scrape_comments() #ejecuta el scrapeo
-        print(f"Se guardaron {total_saved} comentarios") #imprime el número de comentarios scrapeados
+        total_saved = scraper.scrape_comments() 
+        print(f"Se guardaron {total_saved} comentarios") 
     finally:
         scraper.close_driver()
         

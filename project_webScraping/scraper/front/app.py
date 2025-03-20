@@ -5,7 +5,7 @@ import django
 
 project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 sys.path.insert(0, project_path)
-# Configurar Django
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project_webScraping.settings')
 django.setup()
 
@@ -25,7 +25,7 @@ if st.button('Iniciar Scraping'):
             scraper.close_driver()
 
 st.header('Comentarios guardados')
-comments = BookRecommendation.objects.all().order_by('-date')
+comments = BookRecommendation.objects.all()
 
 if comments:
     for comment in comments:
