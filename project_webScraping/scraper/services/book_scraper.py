@@ -3,15 +3,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from database import DatabaseManager
+from datetime import datetime
+from scraper.models import BookRecommendation
 import time
-
+from django.db import close_old_connections
 class BookScraper:
     def __init__(self):
         self.driver = None  # Iniciamos en none porque no tenemos un navegador
         self.wait = None # Iniciamos en none porque inicialmente no tenemos espera
         self.url = "https://meencantaleer.es/tu-opinas/" # URL de la web que queremos scrapear
-        self.db = DatabaseManager() 
 
     def setup_driver(self):
         self.driver = webdriver.Chrome()
@@ -37,6 +37,41 @@ class BookScraper:
         except Exception as e:
             print(f"Error al hacer clic en 'Comentarios anteriores': {e}")
             return False
+    
+    def process_date(self, date_str):
+        meses = {
+            'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+            'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+            'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
+        }
+    
+        try:
+            date_str = date_str.replace('\n', '').strip()
+            date_str = ' '.join(date_str.split())
+            date_str = date_str.replace("el ", "").replace(" a las ", " ")
+            
+            parts = date_str.split()
+            if len(parts) != 5:
+                raise ValueError(f"Formato de fecha inesperado. Partes encontradas: {parts}")
+            
+            mes = meses[parts[0].lower()]
+            dia = parts[1].replace(",", "")
+            año = parts[2].replace(",", "").strip()
+            hora = parts[3]
+            am_pm = parts[4].lower()
+            
+            hora_parts = hora.split(":")
+            hora_num = int(hora_parts[0])
+            if am_pm == "pm" and hora_num != 12:
+                hora_num += 12
+            elif am_pm == "am" and hora_num == 12:
+                hora_num = 0
+            
+            fecha_formateada = f"{año}-{mes}-{dia.zfill(2)} {hora_num:02d}:{hora_parts[1]}"
+            return datetime.strptime(fecha_formateada, "%Y-%m-%d %H:%M")
+        except Exception as e:
+            print(f"Error procesando fecha: {e}")
+            return None
 
     def close_driver(self):
         if self.driver:
@@ -72,7 +107,7 @@ class BookScraper:
     def scrape_comments(self):
         try:
             self.navigate_page()
-            all_comments = []
+            saved_comments = 0
             page_num = 1
             max_pages = 2    # ponemos dos porque sino tarda mucho
             
@@ -83,41 +118,46 @@ class BookScraper:
                 for comment in comments:
                     info = self.extract_comment_info(comment)
                     if info:
-                        all_comments.append(info)
-                        print(f"Autor: {info['author']}")
-                        print(f"Fecha: {info['date']}")
-                        print(f"Comentario: {info['content'][:100]}...")
-                        print("-"*50)
-                print(f"✅ Página {page_num} completada. Comentarios encontrados: {len(comments)}")
+                        try:
+                            date = self.process_date(info['date'])
+                            if date:
+                                close_old_connections()
+                                BookRecommendation.objects.create(
+                                    author=info['author'],
+                                    date=date,
+                                    content=info['content'],
+                                    url=self.url
+                                )
+                                saved_comments += 1
+                                print(f"Autor: {info['author']}")
+                                print(f"Fecha: {date}")
+                                print(f"Comentario: {info['content'][:100]}...")
+                                print("-"*50)
+                        except Exception as e:
+                            print(f"Error al guardar comentario: {e}")
+
+                print(f"✅ Página {page_num} completada.")
 
                 if page_num >= max_pages:
                     print(f"🏁 Alcanzado el límite de {max_pages} páginas")
                     break
 
-                #if not self.next_page():
-                #    print("🏁 No hay más páginas para scrapear")
-                #    break
-
-                #if not self.click_next_page():
-                #    print("🏁 No se pudo hacer clic en 'Comentarios anteriores'")
-                #    break
-
                 page_num += 1
 
-            self.db.save_comments(all_comments, self.url)
-            return all_comments
+            print(f"\n📊 Resumen final:")
+            print(f"- Comentarios guardados exitosamente: {saved_comments}")
+            return saved_comments
                 
         except Exception as e:
             print(f"Error al scrapear los comentarios: {e}")
-            return []
+            return 0
         
 if __name__ == "__main__":                #crea una instancia del scraper
     scraper = BookScraper()
     try:
-        if scraper.db.connection_test():       #Pruebo la conexión antes
-            scraper.setup_driver()           #inicia el navegador
-            results = scraper.scrape_comments() #ejecuta el scrapeo
-            print(f"Se scrapearon {len(results)} comentarios") #imprime el número de comentarios scrapeados
+        scraper.setup_driver()        
+        total_saved = scraper.scrape_comments() #ejecuta el scrapeo
+        print(f"Se guardaron {total_saved} comentarios") #imprime el número de comentarios scrapeados
     finally:
         scraper.close_driver()
-        scraper.db.close_connection()
+        

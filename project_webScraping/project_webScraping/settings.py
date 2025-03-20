@@ -86,9 +86,11 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME'),
         'CLIENT': {
             'host': os.getenv('DB_URI'),
-        }
+        },
+        'ENFORCE_SCHEMA': False, 
     }
 }
+
 
 
 # Password validation
