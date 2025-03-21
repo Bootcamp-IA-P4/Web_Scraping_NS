@@ -9,6 +9,7 @@ from scraper.models import BookRecommendation
 import time
 from django.db import close_old_connections
 from django.utils.timezone import make_aware
+import os
 
 class BookScraper:
     def __init__(self):
@@ -17,8 +18,11 @@ class BookScraper:
         self.url = "https://meencantaleer.es/tu-opinas/" 
 
     def setup_driver(self):
-        self.driver = webdriver.Chrome()
-        self.wait = WebDriverWait(self.driver, 10)
+        if os.environ.get('DOCKER'):
+            self.driver = webdriver.Firefox()
+        else:
+            self.driver = webdriver.Chrome()
+            self.wait = WebDriverWait(self.driver, 10)
     
     def close_driver(self):
         if self.driver:

@@ -39,3 +39,7 @@ Para conectar la base de datos:
 
    admin.site.register(BookRecommendation)
 7. Instalar dns porque es necesario para mongodb atlas: pip install dnspython
+
+
+
+Para entrar al contenedor: docker exec -it web_scraping_ns-web-1 bash
