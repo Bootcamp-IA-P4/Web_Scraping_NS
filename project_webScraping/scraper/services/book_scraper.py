@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,6 +9,7 @@ import time
 from django.db import close_old_connections
 from django.utils.timezone import make_aware
 import os
+import tempfile
 
 class BookScraper:
     def __init__(self):
@@ -18,9 +18,12 @@ class BookScraper:
         self.url = "https://meencantaleer.es/tu-opinas/" 
 
     def setup_driver(self):
-        if os.environ.get('DOCKER'):
+        docker_env = os.environ.get('DOCKER')
+        if docker_env == 'True': 
+            print("Usando Firefox en Docker")
             self.driver = webdriver.Firefox()
         else:
+            print("Usando Chrome")
             self.driver = webdriver.Chrome()
             self.wait = WebDriverWait(self.driver, 10)
     

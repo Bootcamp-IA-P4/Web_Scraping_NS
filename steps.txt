@@ -42,4 +42,6 @@ Para conectar la base de datos:
 
 
 
-Para entrar al contenedor: docker exec -it web_scraping_ns-web-1 bash
+Para entrar al contenedor: docker exec -it web_scraping_ns-web-1 bash       firefox 136.0.2  gecko 0.36.0
+
+docker logs -f web_scraping_ns-web-1
