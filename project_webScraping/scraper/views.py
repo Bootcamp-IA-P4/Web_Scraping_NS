@@ -1,3 +1,6 @@
 from django.shortcuts import render
+from .models import BookRecommendation
 
-# Create your views here.
+def home(request):
+    books = BookRecommendation.objects.all()  # O cualquier lógica para la vista
+    return render(request, 'scraper/home.html', {'books': books})

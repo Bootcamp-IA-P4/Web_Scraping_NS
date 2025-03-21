@@ -77,16 +77,26 @@ WSGI_APPLICATION = 'project_webScraping.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+is_test_env = os.getenv('DJANGO_ENV') == 'test'
+print(is_test_env)
+DB_URI = os.getenv('DB_URI_TEST') if is_test_env else os.getenv('DB_URI')
+DB_NAME = os.getenv('DB_NAME')
+
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': os.getenv('DB_NAME'),
+        'NAME': DB_NAME,
         'CLIENT': {
-            'host': os.getenv('DB_URI'),
+            'host': DB_URI,
         },
         'ENFORCE_SCHEMA': False, 
+        'OPTIONS': {
+            'validationAction': 'warn',
+            'validationLevel': 'moderate'
+        }
     }
 }
+
 
 
 
@@ -130,3 +140,4 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
