@@ -1,6 +1,7 @@
 .venv
 .env
 .webscraper.log
+comments.log
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
