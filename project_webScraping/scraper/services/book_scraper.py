@@ -9,12 +9,25 @@ from scraper.models import BookRecommendation
 import time
 from django.db import close_old_connections
 from django.utils.timezone import make_aware
+import logging
+import csv
+import random
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    handlers=[
+        logging.FileHandler(".webscraper.log", mode="a", encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
 
 class BookScraper:
     def __init__(self):
         self.driver = None  
         self.wait = None 
         self.url = "https://meencantaleer.es/tu-opinas/" 
+        self.logger = logging.getLogger("BookScraper")
 
     def setup_driver(self):
         self.driver = webdriver.Chrome()
@@ -28,7 +41,7 @@ class BookScraper:
         self.driver.get(self.url)
         for _ in range(5):  
             self.driver.execute_script("window.scrollBy(0, 1000);")
-            time.sleep(1)
+            time.sleep(random.uniform(0.3, 0.5))
 
     def get_comments(self):
         try:
@@ -39,13 +52,14 @@ class BookScraper:
         except TimeoutException:
             print("No se cargaron los comentarios 😒")
             return []
+        
 
-    def next_page(self):
-        try:
-            next_button = self.driver.find_element(By.CSS_SELECTOR, "div.nav-previous a")
-            return True
-        except NoSuchElementException:
-            return False
+    # def next_page(self):
+    #     try:
+    #         self.driver.find_element(By.CSS_SELECTOR, "div.nav-previous a")
+    #         return True
+    #     except NoSuchElementException:
+    #         return False
         
     def click_next_page(self):
         try: 
@@ -58,7 +72,6 @@ class BookScraper:
             time.sleep(3)
             return True
         except Exception as e:
-            print(f"Error al hacer clic en 'Comentarios anteriores': {e}")
             return False
     
     def extract_comment_info(self, comment):
@@ -72,7 +85,7 @@ class BookScraper:
                 "content": content
             }
         except Exception as e:
-            print(f"Error al extraer información del comentario: {e}")
+            self.logger.error(f"Error al extraer información del comentario: {str(e)}")
             return None
     
     def process_date(self, date_str):
@@ -83,7 +96,7 @@ class BookScraper:
         }
 
         try:
-            date_str = date_str.replace('\n', '').strip()
+            # date_str = date_str.replace('\n', '').strip()
             date_str = ' '.join(date_str.split())
             date_str = date_str.replace("el ", "").replace(" a las ", " ")
 
@@ -113,53 +126,69 @@ class BookScraper:
             return None
 
     def scrape_comments(self):
+        start_time = datetime.now()
+        self.logger.info("\n" + "="*50)
+        self.logger.info(f"🕵️‍♂️ INICIO SCRAPING: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.logger.info("="*50 + "\n")
         try:
             self.navigate_page()
             saved_comments = 0
             page_num = 1
-            max_pages = 2    # ponemos dos porque sino tarda mucho
+            max_pages = 1    # ponemos dos porque sino tarda mucho
             
-            while True:
-                print(f"\n📄 Scrapeando página {page_num} de {max_pages}...")
-                comments = self.get_comments()
+            with open("comments.csv", mode="a", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                if file.tell() == 0:
+                    writer.writerow(["author", "date", "content"])
 
-                for comment in comments:
-                    info = self.extract_comment_info(comment)
-                    if info:
-                        try:
-                            date = self.process_date(info['date'])
-                            if date:
-                                close_old_connections()
-                                print(f"Guardando comentario: {info}")
-                                BookRecommendation.objects.create(
-                                    author=info['author'],
-                                    date=date,
-                                    content=info['content'],
-                                    url=self.url
-                                )
-                                saved_comments += 1
-                                print(f"Autor: {info['author']}")
-                                print(f"Fecha: {date}")
-                                print(f"Comentario: {info['content'][:100]}...")
-                                print("-"*50)
-                        except Exception as e:
-                            print(f"Error al guardar comentario: {e.__class__.__name__}")
-                            print(f"Datos del comentario: {info}")
+                while True:
+                    self.logger.debug(f"\n📄 Scraping pagina {page_num} de {max_pages}...")
+                    comments = self.get_comments()
 
-                print(f"✅ Página {page_num} completada.")
+                    for comment in comments:
+                        info = self.extract_comment_info(comment)
+                        if info:
+                            try:
+                                date = self.process_date(info['date'])
+                                if date:
+                                    close_old_connections()
+                                    BookRecommendation.objects.create(
+                                        author=info['author'],
+                                        date=date,
+                                        content=info['content'],
+                                        url=self.url
+                                    )
+                                    writer.writerow([info['author'], date, info['content']])
 
-                if page_num >= max_pages:
-                    print(f"🏁 Alcanzado el límite de {max_pages} páginas")
-                    break
+                                    saved_comments += 1
+                                    self.logger.info(
+                                        f"📝 Comentario guardado\n"
+                                        f" ├── Autor: {info['author']}\n"
+                                        f" ├── Fecha: {date}\n"
+                                        f" └── Contenido: {info['content'][:50]}..."
+                                    )
+                            except Exception as e:
+                                self.logger.error(f"Error al guardar comentario: {e.__class__.__name__}")
 
-                page_num += 1
+                    self.logger.info(f"✅ [Página {page_num}] Scrapeo completado. Total guardados: {saved_comments}\n")
 
-            print(f"\n📊 Resumen final:")
-            print(f"- Comentarios guardados exitosamente: {saved_comments}")
+                    if page_num >= max_pages:
+                        break
+
+                    page_num += 1
+
+            end_time = datetime.now()
+            self.logger.info("\n📊 RESUMEN FINAL")
+            self.logger.info(f"📌 Total comentarios guardados: {saved_comments}")
+            self.logger.info(f"⏳ Tiempo total: {end_time - start_time}")
+            self.logger.info("\n" + "="*50)
+            self.logger.info("🔚 FIN DEL SCRAPING")
+            self.logger.info("="*50 + "\n")
+
             return saved_comments
                 
         except Exception as e:
-            print(f"Error al scrapear los comentarios: {e}")
+            self.logger.error(f"Error al scrapear los comentarios: {e}")
             return 0
         
 if __name__ == "__main__":                
@@ -167,7 +196,6 @@ if __name__ == "__main__":
     try:
         scraper.setup_driver()        
         total_saved = scraper.scrape_comments() 
-        print(f"Se guardaron {total_saved} comentarios") 
     finally:
         scraper.close_driver()
         
