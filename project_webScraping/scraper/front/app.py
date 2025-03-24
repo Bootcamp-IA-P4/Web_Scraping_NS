@@ -19,8 +19,8 @@ if st.button('Iniciar Scraping'):
         scraper = BookScraper()
         try:
             scraper.setup_driver()
-            total_saved = scraper.scrape_comments()
-            st.success(f'Se han encontrado {total_saved} comentarios')
+            total_saved, total_updated = scraper.scrape_comments()
+            st.success(f'Se han encontrado {total_saved} nuevos comentarios y actualizado {total_updated} comentarios')
         finally:
             scraper.close_driver()
 
