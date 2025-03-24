@@ -78,7 +78,6 @@ WSGI_APPLICATION = 'project_webScraping.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 is_test_env = os.getenv('DJANGO_ENV') == 'test'
-print(is_test_env)
 DB_URI = os.getenv('DB_URI_TEST') if is_test_env else os.getenv('DB_URI')
 DB_NAME = os.getenv('DB_NAME')
 
