@@ -124,7 +124,7 @@ class BookScraper:
             self.navigate_page()
             saved_comments = 0
             page_num = 1
-            max_pages = 1    # Cambiar a más páginas para obtener más comentarios, de momento es para la demostración
+            max_pages = 10   
             
             with open("comments.csv", mode="a", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
