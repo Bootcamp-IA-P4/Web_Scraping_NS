@@ -1,0 +1,18 @@
+
+services:
+  web:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - C:\Users\Nhoeli\Desktop\Bootcamp_IA\TercerProyecto\Web_Scraping_NS\.env
+    environment:
+      - DOCKER=true
+    volumes:
+      - /tmp/selenium_data:/tmp/selenium_data
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge
