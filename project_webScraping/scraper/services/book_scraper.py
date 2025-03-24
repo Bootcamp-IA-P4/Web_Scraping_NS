@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -51,15 +50,7 @@ class BookScraper:
             return comments
         except TimeoutException:
             print("No se cargaron los comentarios 😒")
-            return []
-        
-
-    # def next_page(self):
-    #     try:
-    #         self.driver.find_element(By.CSS_SELECTOR, "div.nav-previous a")
-    #         return True
-    #     except NoSuchElementException:
-    #         return False
+            return []        
         
     def click_next_page(self):
         try: 
