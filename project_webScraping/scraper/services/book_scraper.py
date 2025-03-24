@@ -50,8 +50,8 @@ class BookScraper:
             return comments
         except TimeoutException:
             print("No se cargaron los comentarios 😒")
-            return []        
-        
+            return []
+                
     def click_next_page(self):
         try: 
             next_button = self.wait.until(
@@ -87,7 +87,6 @@ class BookScraper:
         }
 
         try:
-            # date_str = date_str.replace('\n', '').strip()
             date_str = ' '.join(date_str.split())
             date_str = date_str.replace("el ", "").replace(" a las ", " ")
 
@@ -124,9 +123,8 @@ class BookScraper:
         try:
             self.navigate_page()
             saved_comments = 0
-            updated_comments = 0
             page_num = 1
-            max_pages = 1    # ponemos dos porque sino tarda mucho
+            max_pages = 2    # ponemos dos porque sino tarda mucho
             
             with open("comments.csv", mode="a", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
@@ -144,28 +142,21 @@ class BookScraper:
                                 date = self.process_date(info['date'])
                                 if date:
                                     close_old_connections()
-                                    obj, created = BookRecommendation.objects.update_or_create(
+                                    BookRecommendation.objects.create(
                                         author=info['author'],
                                         date=date,
-                                        defaults={"content": info['content'], "url": self.url}
+                                        content=info['content'],
+                                        url=self.url
                                     )
-                                    if created:
-                                        saved_comments += 1
-                                        self.logger.info(
-                                            f"📝 Comentario guardado\n"
-                                            f" ├── Autor: {info['author']}\n"
-                                            f" ├── Fecha: {date}\n"
-                                            f" └── Contenido: {info['content'][:50]}..."
-                                        )
-                                    else: 
-                                        updated_comments += 1
-                                        self.logger.info(
-                                            f"🔄 Comentario actualizado\n"
-                                            f" ├── Autor: {info['author']}\n"
-                                            f" ├── Fecha: {date}\n"
-                                            f" └── Contenido: {info['content'][:50]}..."
-                                        )
                                     writer.writerow([info['author'], date, info['content']])
+
+                                    saved_comments += 1
+                                    self.logger.info(
+                                        f"📝 Comentario guardado\n"
+                                        f" ├── Autor: {info['author']}\n"
+                                        f" ├── Fecha: {date}\n"
+                                        f" └── Contenido: {info['content'][:50]}..."
+                                    )
                             except Exception as e:
                                 self.logger.error(f"Error al guardar comentario: {e.__class__.__name__}")
 
@@ -184,7 +175,7 @@ class BookScraper:
             self.logger.info("🔚 FIN DEL SCRAPING")
             self.logger.info("="*50 + "\n")
 
-            return saved_comments, updated_comments
+            return saved_comments
                 
         except Exception as e:
             self.logger.error(f"Error al scrapear los comentarios: {e}")

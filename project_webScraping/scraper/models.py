@@ -1,9 +1,9 @@
 from django.db import models
 
 class BookRecommendation(models.Model):
-    author = models.CharField(max_length=200)
+    author = models.CharField(max_length=200, blank=False)
     date = models.DateTimeField()
-    content = models.TextField()
+    content = models.TextField(blank=False)
     url = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)
 
