@@ -1,16 +1,17 @@
-# Project Web Scraping - Comentarios de Libros
+# 🚀 Project Web Scraping - Comentarios de Libros 📚
 
 ## Índice
 
 1.  [Descripción del Proyecto](#descripción-del-proyecto)
 2.  [Estructura del Proyecto](#estructura-del-proyecto)
-3.  [Requisitos](#requisitos)
-4.  [Instalación](#instalación)
-5.  [Uso](#uso)
-6.  [Testing](#Testing)
-7.  [Próximos Pasos](#próximos-pasos)
-8.  [Contribución](#contribución)
-9.  [Autora](#Autora)
+3.  [🛠️ Requisitos](#requisitos)
+4.  [⚙️ Instalación](#instalación)
+5.  [🕹️ Uso](#uso)
+6.  [🧪 Testing](#Testing)
+7.  [🐳 Despliegue con Docker](#despliegue-con-docker)
+8.  [➡️ Próximos Pasos](#próximos-pasos)
+9.  [🤝 Contribución](#contribución)
+10. [👩‍💻 Autora](#Autora)
 
 
 ## Descripción del Proyecto
@@ -22,6 +23,7 @@ Este proyecto realiza web scraping de comentarios de libros de una web de recome
     * .webscraper.log
     * db.sqlite3
     * Dockerfile
+    * docker-compose.yml
     * manage.py
     * project_webScraping/
         * settings.py
@@ -36,7 +38,7 @@ Este proyecto realiza web scraping de comentarios de libros de una web de recome
             * book_scraper.py* project_webScraping/
 
     
-## Requisitos
+## 🛠️ Requisitos
 
 * Python 3.8+
 * Django
@@ -44,8 +46,9 @@ Este proyecto realiza web scraping de comentarios de libros de una web de recome
 * Streamlit
 * MongoDB Atlas
 * ChromeDriver
+* Docker
 
-## Instalación
+## ⚙️ Instalación
 
 1.  Clonar el repositorio:
 
@@ -85,11 +88,11 @@ Este proyecto realiza web scraping de comentarios de libros de una web de recome
         streamlit run scrape/front/app.py
         ```
 
-## Uso
+## 🕹️ Uso
 
 1.  Se abre la web con los comentarios anteriores y el scraper se ejecuta al pulsar en iniciar y guarda los comentarios en MongoDB Atlas.
 
-## Testing
+## 🧪 Testing
 
 Incluye testing:
 
@@ -105,15 +108,40 @@ Para probar los tests:
   <img src="https://res.cloudinary.com/artevivo/image/upload/v1742771260/Captura_de_pantalla_2025-03-24_000718_fc4zwc.png" width="700" alt="Art Brushes" />
 </div>
 
+## 🐳 Despliegue con Docker
 
-## Próximos Pasos
+Este proyecto puede ser fácilmente desplegado utilizando Docker Compose.
+
+1.  **Archivo `Dockerfile` y `docker-compose.yml`:** Ya existen los archivos `Dockerfile` y `docker-compose.yml` en la raíz del proyecto. Estos archivos contienen la configuración necesaria para construir y orquestar los contenedores de la aplicación.
+
+2.  **Levantar la aplicación con Docker Compose:**
+
+    Para construir la imagen e iniciar los contenedores definidos en `docker-compose.yml`, ejecuta el siguiente comando en la raíz del proyecto:
+
+    ```bash
+    docker-compose up --build 
+    ```
+
+    La aplicación estará accesible en  `http://localhost:8501` para Streamlit.
+
+    Para ver los logs de los contenedores:
+
+    Para detener los contenedores:
+
+    ```bash
+    docker-compose down
+    ```
+
+
+
+## ➡️ Próximos Pasos
 
 * Implementar autenticación de usuario.
 * Añadir más filtros y opciones de búsqueda en la interfaz de Streamlit.
 * Optimizar el rendimiento del scraper.
 
 
-## Contribución
+## 🤝 Contribución
 
 Si deseas contribuir a este proyecto, sigue estos pasos:
 
@@ -123,6 +151,6 @@ Si deseas contribuir a este proyecto, sigue estos pasos:
 4.  Sube los cambios a tu rama (`git push origin feature/nueva-funcionalidad`).
 5.  Abre un pull request.
 
-## Autora
+## 👩‍💻 Autora
 
 *   [Nhoeli Salazar](https://github.com/Nho89)
